@@ -1,8 +1,12 @@
 import express from 'express';
 import { validationResult } from 'express-validator';
-import { UserModel, UserModelInterface } from '../models/UserModel';
+import jwt from 'jsonwebtoken';
+import mongoose from 'mongoose';
+import { UserModel, UserModelDocumentInterface, UserModelInterface } from '../models/UserModel';
 import { generateMD5 } from '../utils/generateHash';
 import { sentEmail } from '../utils/sentEmail';
+
+const isValidObjectId = mongoose.Types.ObjectId.isValid;
 
 class UserController {
 	async index(_: express.Request, res: express.Response): Promise<void> {
@@ -12,6 +16,34 @@ class UserController {
 			res.json({
 				status: 'success',
 				data: users,
+			});
+		} catch (e) {
+			res.status(500).json({
+				status: 'error',
+				message: e,
+			});
+		}
+	}
+
+	async show(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const userId: string = req.params.id as string;
+
+			if (!isValidObjectId(userId)) {
+				res.status(400).send();
+				return;
+			}
+
+			const user = await UserModel.findById(userId).exec();
+
+			if (!user) {
+				res.status(404).send();
+				return;
+			}
+
+			res.json({
+				status: 'success',
+				data: user,
 			});
 		} catch (e) {
 			res.status(500).json({
@@ -36,7 +68,7 @@ class UserController {
 				email: req.body.email,
 				username: req.body.username,
 				fullname: req.body.fullname,
-				password: req.body.password,
+				password: generateMD5(req.body.password + process.env.SECRET_KEY!),
 				confirmHash: generateMD5(process.env.SECRET_KEY!),
 			};
 
@@ -49,7 +81,7 @@ class UserController {
 					subject: 'Подтверждение почты Twitter Clone',
 					html: `Для того, чтобы подтвердить почту, перейдите <a href="http://localhost:${
 						process.env.PORT || 8888
-					}/users/verify?hash=${data.confirmHash}">по этой ссылке</a>`,
+					}/auth/verify?hash=${data.confirmHash}">по этой ссылке</a>`,
 				},
 				(err: Error | null) => {
 					if (err) {
@@ -93,10 +125,47 @@ class UserController {
 				});
 			} else {
 				res.status(404).json({
-          status: "error",
-          message: "Пользователь не найден"
-        });
+					status: 'error',
+					message: 'Пользователь не найден',
+				});
 			}
+		} catch (e) {
+			res.status(500).json({
+				status: 'error',
+				message: e,
+			});
+		}
+	}
+
+	async afterLogin(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const user = (req.user as UserModelDocumentInterface).toJSON();
+
+			res.json({
+				status: 'success',
+				data: {
+					...user,
+					token: jwt.sign({ data: req.user }, process.env.SECRET_KEY, {
+						expiresIn: process.env.MAX_AGE,
+					}),
+				},
+			});
+		} catch (e) {
+			res.status(500).json({
+				status: 'error',
+				message: e,
+			});
+		}
+	}
+
+	async getUserInfo(req: express.Request, res: express.Response): Promise<void> {
+		try {
+			const user = (req.user as UserModelDocumentInterface).toJSON();
+
+			res.json({
+				status: 'success',
+				data: user,
+			});
 		} catch (e) {
 			res.status(500).json({
 				status: 'error',

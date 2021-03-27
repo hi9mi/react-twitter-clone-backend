@@ -1,18 +1,19 @@
-import { model, Schema, Document } from 'mongoose';
+import { Document, model, Schema } from 'mongoose';
 
 export interface UserModelInterface {
-  email: string;
-  password: string;
-  username: string;
-  fullname: string;
-  confirmHash: string;
-  confirmed?: boolean;
-  location?: string;
-  about?: string;
-  website?: string;
+	_id?: string
+	email: string;
+	password: string;
+	username: string;
+	fullname: string;
+	confirmHash: string;
+	confirmed?: boolean;
+	location?: string;
+	about?: string;
+	website?: string;
 }
 
-export type UserModelDocumentInterface = UserModelInterface & Document
+export type UserModelDocumentInterface = UserModelInterface & Document;
 
 const UserSchema = new Schema<UserModelDocumentInterface>({
 	email: {
@@ -44,6 +45,14 @@ const UserSchema = new Schema<UserModelDocumentInterface>({
 	location: String,
 	about: String,
 	website: String,
+});
+
+UserSchema.set('toJSON', {
+	transform: function (_: UserModelInterface, obj: UserModelInterface) {
+		delete obj.password;
+		delete obj.confirmHash;
+		return obj;
+	},
 });
 
 export const UserModel = model<UserModelDocumentInterface>('User', UserSchema);
