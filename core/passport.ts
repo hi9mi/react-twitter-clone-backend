@@ -1,6 +1,7 @@
 import passport from 'passport';
 import { ExtractJwt as ExtractJWT, Strategy as JWTstrategy } from 'passport-jwt';
 import { Strategy as LocalStrategy } from 'passport-local';
+
 import { UserModel, UserModelInterface } from '../models/UserModel';
 import { generateMD5 } from '../utils/generateHash';
 
@@ -38,7 +39,7 @@ passport.use(
 		},
 		async (payload: { data: UserModelInterface }, done) => {
 			try {
-				const user = await (await UserModel.findById(payload.data._id)).execPopulate();
+				const user = await UserModel.findById(payload.data._id).exec();
 				if (user) {
 					return done(null, user);
 				}
