@@ -9,7 +9,7 @@ import { isValidObjectId } from '../utils/isValidObjectId';
 class TweetsController {
 	async index(_: express.Request, res: express.Response): Promise<void> {
 		try {
-			const tweets = await TweetModel.find({}).exec();
+			const tweets = await TweetModel.find({}).populate('user').sort({ createdAt: '-1' }).exec();
 
 			res.json({
 				status: 'success',
@@ -32,7 +32,7 @@ class TweetsController {
 				return;
 			}
 
-			const tweet = await TweetModel.findById(tweetId).exec();
+			const tweet = await TweetModel.findById(tweetId).populate('user').exec();
 
 			if (!tweet) {
 				res.status(404).send();
@@ -75,7 +75,7 @@ class TweetsController {
 
 				res.json({
 					ststus: 'success',
-					data: tweet,
+					data: await tweet.populate('user').execPopulate(),
 				});
 			}
 		} catch (e) {
@@ -98,10 +98,50 @@ class TweetsController {
 				}
 
 				const tweet = await TweetModel.findById(tweetId);
-				// String(user._id) === String(tweet.user._id)
-				if (tweet && Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
-					tweet.remove();
-					res.send();
+
+				if (tweet) {
+					// String(user._id) === String(tweet.user._id)
+					if (Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
+						tweet.remove();
+						res.send();
+					} else {
+						res.status(403).send();
+					}
+				} else {
+					res.status(404).send();
+				}
+			}
+		} catch (e) {
+			res.status(500).json({
+				status: 'error',
+				message: e,
+			});
+		}
+	}
+
+	async update(req: express.Request, res: express.Response): Promise<void> {
+		const user = req.user as UserModelInterface;
+		try {
+			if (user) {
+				const tweetId = req.params.id;
+
+				if (!isValidObjectId(tweetId)) {
+					res.status(400).send();
+					return;
+				}
+
+				const tweet = await TweetModel.findById(tweetId);
+
+				if (tweet) {
+					// String(user._id) === String(tweet.user._id)
+					if (Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
+						const text = req.body.text as string;
+						tweet.text = text;
+						tweet.save();
+						res.send();
+					} else {
+						res.status(403).send();
+					}
 				} else {
 					res.status(404).send();
 				}
