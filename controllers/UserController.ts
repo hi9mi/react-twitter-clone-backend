@@ -7,8 +7,6 @@ import { generateMD5 } from '../utils/generateHash';
 import { sentEmail } from '../utils/sentEmail';
 import { isValidObjectId } from '../utils/isValidObjectId';
 
-
-
 class UserController {
 	async index(_: express.Request, res: express.Response): Promise<void> {
 		try {
@@ -70,7 +68,7 @@ class UserController {
 				username: req.body.username,
 				fullname: req.body.fullname,
 				password: generateMD5(req.body.password + process.env.SECRET_KEY!),
-				confirmHash: generateMD5(process.env.SECRET_KEY!),
+				confirmHash: generateMD5(process.env.SECRET_KEY! + Date.now().toString(36)),
 			};
 
 			const user = await UserModel.create(data);
@@ -108,7 +106,7 @@ class UserController {
 
 	async verify(req: express.Request, res: express.Response): Promise<void> {
 		try {
-			const hash: string = req.query.hash as string;
+			const hash = req.query.hash as string;
 
 			if (!hash) {
 				res.status(400).send();
