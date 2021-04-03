@@ -6,6 +6,7 @@ import { TweetModel, TweetModelInterface } from '../models/TweetModel';
 import { UserModelInterface } from '../models/UserModel';
 import { isValidObjectId } from '../utils/isValidObjectId';
 
+
 class TweetsController {
 	async index(_: express.Request, res: express.Response): Promise<void> {
 		try {
@@ -51,7 +52,7 @@ class TweetsController {
 		}
 	}
 
-	async create(req: express.Request, res: express.Response): Promise<void> {
+	async create(req:  express.Request, res: express.Response): Promise<void> {
 		try {
 			const user = req.user as UserModelInterface;
 
@@ -119,7 +120,7 @@ class TweetsController {
 		}
 	}
 
-	async update(req: express.Request, res: express.Response): Promise<void> {
+	async update(req:  express.Request, res: express.Response): Promise<void> {
 		const user = req.user as UserModelInterface;
 		try {
 			if (user) {

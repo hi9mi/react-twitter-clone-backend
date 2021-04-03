@@ -3,14 +3,27 @@ dotenv.config();
 
 import express from 'express';
 import mongoose from 'mongoose';
+import multer from 'multer';
 
-import { UserCtrl } from './controllers/UserController';
-import { TweetsCtrl } from './controllers/TweetsController';
 import { passport } from './core/passport';
 import { registerValidations } from './validations/register';
 import { createTweetValidations } from './validations/createTweet';
+import { UserCtrl } from './controllers/UserController';
+import { TweetsCtrl } from './controllers/TweetsController';
+import { UploadFileCtrl } from './controllers/UploadFileController';
 
 const app = express();
+// const storage = multer.diskStorage({
+// 	destination: function (_, __, cb) {
+// 		cb(null, __dirname + '/uploads');
+// 	},
+// 	filename: function (_, file, cb) {
+// 		const ext = file.originalname.split('.').pop();
+// 		cb(null, 'image-' + Date.now() + ext);
+// 	},
+// });
+const storage = multer.memoryStorage()
+const upload = multer({ storage });
 
 app.use(express.json());
 app.use(passport.initialize());
@@ -28,6 +41,8 @@ app.post('/tweets', passport.authenticate('jwt'), createTweetValidations, Tweets
 app.get('/auth/verify', registerValidations, UserCtrl.verify);
 app.post('/auth/register', registerValidations, UserCtrl.create);
 app.post('/auth/login', passport.authenticate('local'), UserCtrl.afterLogin);
+
+app.post('/upload', upload.single('avatar'), UploadFileCtrl.upload);
 
 const PORT = process.env.PORT || 8888;
 
