@@ -14,7 +14,11 @@ class UploadFileController {
 					});
 				}
 
-				res.status(201).json(result);
+				res.status(201).json({
+					url: result.url,
+					size: `${Math.round(result.bytes / 1024)} bytes`,
+					resolution: `${result.width}x${result.height}`,
+				});
 			})
 			.end(file.buffer);
 	}
