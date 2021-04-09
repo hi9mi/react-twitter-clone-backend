@@ -2,7 +2,7 @@ import express from 'express';
 import { validationResult } from 'express-validator';
 import { Types } from 'mongoose';
 
-import { TweetModel, TweetModelInterface } from '../models/TweetModel';
+import { TweetModel, TweetModelDocumentInterface, TweetModelInterface } from '../models/TweetModel';
 import { UserModelInterface } from '../models/UserModel';
 import { isValidObjectId } from '../utils/isValidObjectId';
 
@@ -51,34 +51,67 @@ class TweetsController {
 		}
 	}
 
+	async getUserTweets(req: express.Request<TweetModelDocumentInterface>, res: express.Response): Promise<void> {
+		try {
+			const userId = req.params.id;
+
+			if (!isValidObjectId(userId)) {
+				res.status(400).send();
+				return;
+			}
+
+			const tweet = await TweetModel.find({ user: userId }).populate('user').sort({ createdAt: '-1' }).exec();
+
+			if (!tweet) {
+				res.status(404).send();
+				return;
+			}
+
+			res.json({
+				status: 'success',
+				data: tweet,
+			});
+		} catch (e) {
+			res.status(500).json({
+				status: 'error',
+				message: e,
+			});
+		}
+	}
+
 	async create(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const user = req.user as UserModelInterface;
 
-			if (user) {
-				const errors = validationResult(req);
-
-				if (!errors.isEmpty()) {
-					res.status(400).json({
-						status: 'error',
-						errors: errors.array(),
-					});
-					return;
-				}
-
-				const data: TweetModelInterface = {
-					text: req.body.text,
-					images: req.body.images,
-					user: user,
-				};
-
-				const tweet = await TweetModel.create(data);
-
-				res.json({
-					ststus: 'success',
-					data: await tweet.populate('user').execPopulate(),
-				});
+			if (!user) {
+				res.status(404).send();
+				return;
 			}
+
+			const errors = validationResult(req);
+
+			if (!errors.isEmpty()) {
+				res.status(400).json({
+					status: 'error',
+					errors: errors.array(),
+				});
+				return;
+			}
+
+			const data: TweetModelInterface = {
+				text: req.body.text,
+				images: req.body.images,
+				user: user,
+			};
+
+			const tweet = await TweetModel.create(data);
+
+			user.tweets.push(tweet._id);
+
+			res.json({
+				ststus: 'success',
+				data: await tweet.populate('user').execPopulate(),
+			});
 		} catch (e) {
 			res.status(500).json({
 				status: 'error',
@@ -100,17 +133,17 @@ class TweetsController {
 
 				const tweet = await TweetModel.findById(tweetId);
 
-				if (tweet) {
-					// String(user._id) === String(tweet.user._id)
-					if (Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
-						tweet.remove();
-						res.send();
-					} else {
-						res.status(403).send();
-					}
-				} else {
+				if (!tweet) {
 					res.status(404).send();
+					return;
 				}
+				if (!Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
+					res.status(403).send();
+					return;
+				}
+
+				tweet.remove();
+				res.send();
 			}
 		} catch (e) {
 			res.status(500).json({
@@ -133,19 +166,19 @@ class TweetsController {
 
 				const tweet = await TweetModel.findById(tweetId);
 
-				if (tweet) {
-					// String(user._id) === String(tweet.user._id)
-					if (Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
-						const text = req.body.text as string;
-						tweet.text = text;
-						tweet.save();
-						res.send();
-					} else {
-						res.status(403).send();
-					}
-				} else {
+				if (!tweet) {
 					res.status(404).send();
+					return;
 				}
+				if (!Types.ObjectId(user._id).equals(new Types.ObjectId(tweet.user._id))) {
+					res.status(403).send();
+					return;
+				}
+
+				const text = req.body.text as string;
+				tweet.text = text;
+				tweet.save();
+				res.send();
 			}
 		} catch (e) {
 			res.status(500).json({

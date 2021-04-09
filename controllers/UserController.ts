@@ -33,7 +33,7 @@ class UserController {
 				return;
 			}
 
-			const user = await UserModel.findById(userId).exec();
+			const user = await UserModel.findById(userId).populate('tweets').exec();
 
 			if (!user) {
 				res.status(404).send();
@@ -55,6 +55,7 @@ class UserController {
 	async create(req: express.Request, res: express.Response): Promise<void> {
 		try {
 			const errors = validationResult(req);
+
 			if (!errors.isEmpty()) {
 				res.status(400).json({
 					status: 'error',
@@ -88,12 +89,13 @@ class UserController {
 							status: 'error',
 							message: err,
 						});
-					} else {
-						res.status(201).json({
-							status: 'succes',
-							data: user,
-						});
+						return;
 					}
+
+					res.status(201).json({
+						status: 'succes',
+						data: user,
+					});
 				},
 			);
 		} catch (e) {
@@ -115,19 +117,26 @@ class UserController {
 
 			const user = await UserModel.findOne({ confirmHash: hash }).exec();
 
-			if (user) {
-				user.confirmed = true;
-				user.save();
-
-				res.json({
-					status: 'success',
-				});
-			} else {
+			if (!user) {
 				res.status(404).json({
 					status: 'error',
 					message: 'Пользователь не найден',
 				});
+				return;
 			}
+
+			user.confirmed = true;
+			user.save();
+
+			res.json({
+				status: 'success',
+				data: {
+					...user.toJSON(),
+					token: jwt.sign({ data: user.toJSON() }, process.env.SECRET_KEY, {
+						expiresIn: process.env.MAX_AGE,
+					}),
+				},
+			});
 		} catch (e) {
 			res.status(500).json({
 				status: 'error',

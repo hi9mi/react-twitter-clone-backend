@@ -13,15 +13,6 @@ import { TweetsCtrl } from './controllers/TweetsController';
 import { UploadFileCtrl } from './controllers/UploadFileController';
 
 const app = express();
-// const storage = multer.diskStorage({
-// 	destination: function (_, __, cb) {
-// 		cb(null, __dirname + '/uploads');
-// 	},
-// 	filename: function (_, file, cb) {
-// 		const ext = file.originalname.split('.').pop();
-// 		cb(null, 'image-' + Date.now() + ext);
-// 	},
-// });
 const storage = multer.memoryStorage()
 const upload = multer({ storage });
 
@@ -34,6 +25,7 @@ app.get('/users/:id', UserCtrl.show);
 
 app.get('/tweets', TweetsCtrl.index);
 app.get('/tweets/:id', TweetsCtrl.show);
+app.get('/tweets/user/:id', TweetsCtrl.getUserTweets);
 app.delete('/tweets/:id', passport.authenticate('jwt'), TweetsCtrl.delete);
 app.patch('/tweets/:id', passport.authenticate('jwt'), createTweetValidations, TweetsCtrl.update);
 app.post('/tweets', passport.authenticate('jwt'), createTweetValidations, TweetsCtrl.create);
